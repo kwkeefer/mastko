@@ -115,16 +115,9 @@ Resources:
           ./configure --enable-optimizations
           make altinstall
           
-          yum install -y nmap git
+          yum install -y git
 
           export WORKDIR=/opt
-          
-          # Install masscan
-          cd $WORKDIR
-          git clone https://github.com/robertdavidgraham/masscan.git
-          cd masscan
-          make
-          make install
 
           # Install MasTKO
           cd $WORKDIR

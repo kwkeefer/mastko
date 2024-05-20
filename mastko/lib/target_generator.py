@@ -112,14 +112,14 @@ class TargetGenerator:
 
         return cleaned_hosts
 
-    def create_target(self, inactive_host: Host) -> Optional[Target]:
+    def create_target(self, host: Host) -> Optional[Target]:
         try:
-            region = self.aws_cidr.find_alloc_group(inactive_host.ip_address)
-            log.debug(f"{inactive_host.ip_address} is associated to {region}")
+            region = self.aws_cidr.find_alloc_group(host.ip_address)
+            log.debug(f"{host.ip_address} is associated to {region}")
             if region:
                 return Target(
-                    domain=inactive_host.domain,
-                    ip_address=inactive_host.ip_address,
+                    domain=host.domain,
+                    ip_address=host.ip_address,
                     region=region,
                 )
             return None
