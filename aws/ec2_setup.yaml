@@ -128,8 +128,9 @@ Resources:
 
           # Install MasTKO
           cd $WORKDIR
-          git clone https://github.com/intuit/mastko.git
+          git clone https://github.com/kwkeefer/mastko.git
           cd mastko
+          git checkout ged
           python3 -m pip install .
   EIP:
     Type: AWS::EC2::EIP
