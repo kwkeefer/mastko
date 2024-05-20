@@ -119,65 +119,6 @@ class TargetGenerator:
 
         return cleaned_hosts
 
-    def get_inactive_hosts(self, hosts: List[Host]) -> List[Host]:
-        masscan_input_file_location = f"{Configs.mastko_cache_location}/masscan_input_ips_file"
-        nmap_input_file_location = f"{Configs.mastko_cache_location}/nmap_input_ips_file"
-        try:
-            """Scan top 100 ports for signs of life, mark hosts inactive no response."""
-            log.info(f"Scanning {len(hosts)} hosts to identify inactive ones.")
-            ips = [host.ip_address for host in hosts]
-            with open(masscan_input_file_location, "w", encoding="utf-8") as masscan_input:
-                masscan_input.write("\n".join([ip for ip in ips]))
-            r_active_ips_ms = r"Discovered open port [0-9]{2,5}\/tcp on ([0-9\.\:]+)"
-            masscan_command = [
-                "sudo",
-                "masscan",
-                "--top-ports",
-                "100",
-                "--max-rate",
-                "100000",
-                "-iL",
-                masscan_input_file_location,
-            ]
-            log.info(f"Running masscan command, might require password for sudo: {' '.join(masscan_command)}")
-            with subprocess.Popen(masscan_command, stdout=subprocess.PIPE) as ms_proc:
-                lofi_scan = str(ms_proc.stdout.read()) if ms_proc.stdout else ""
-            active_ips = set(re.findall(r_active_ips_ms, lofi_scan))
-            inactive_hosts = [host for host in hosts if host.ip_address not in active_ips]
-            inactive_ips = {host.ip_address for host in inactive_hosts}
-            with open(nmap_input_file_location, "w", encoding="utf-8") as nmap_input:
-                nmap_input.write("\n".join([ip for ip in inactive_ips]))
-            nmap_command = [
-                "sudo",
-                "nmap",
-                "--max-retries",
-                "3",
-                "--host-timeout",
-                "5m",
-                "-T4",
-                "-sn",
-                "-iL",
-                nmap_input_file_location,
-            ]
-            log.info(f"Running nmap command, might require password for sudo: {' '.join(nmap_command)}")
-            r_active_ips_nm = r"Nmap scan report for .+?\(([0-9\.\:]+)\)"
-            with subprocess.Popen(nmap_command, stdout=subprocess.PIPE) as nm_proc:
-                hifi_scan = str(nm_proc.stdout.read()) if nm_proc.stdout else ""
-            active_ips2 = set(re.findall(r_active_ips_nm, hifi_scan))
-            inactive_hosts2 = [host for host in inactive_hosts if host.ip_address not in active_ips2]
-            log.info(f"Detected {len(inactive_hosts2)} inactive hosts.")
-            if not inactive_hosts2:
-                raise NoTargetsFound("our scanner did not find any inactive hosts in the input file.")
-            return inactive_hosts2
-        except Exception as ex:
-            if ex.__class__ != NoTargetsFound:
-                err_msg = f"Error while scanning for inactive targets. Error: {ex}"
-                log.exception(ex)
-                raise TargetGeneratorException(err_msg)
-            raise ex
-        finally:
-            os.remove(masscan_input_file_location)
-
     def create_target(self, inactive_host: Host) -> Optional[Target]:
         try:
             region = self.aws_cidr.find_alloc_group(inactive_host.ip_address)
@@ -231,13 +172,12 @@ class TargetGenerator:
     def generate(self) -> List[Target]:
         try:
             cleaned_hosts = self.clean_hosts()
-            inactive_hosts = self.get_inactive_hosts(cleaned_hosts)
             results: tqdm[Optional[Target]]
             with futures.ThreadPoolExecutor(self.threads) as executor:
                 results = tqdm(
-                    executor.map(self.create_target, inactive_hosts),
+                    executor.map(self.create_target, cleaned_hosts),
                     desc="Associating Domains to AWS Region",
-                    total=len(inactive_hosts),
+                    total=len(cleaned_hosts),
                     ncols=100,
                 )
 
