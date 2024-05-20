@@ -1,7 +1,6 @@
-import os
+
 import re
 import socket
-import subprocess
 import sys
 from concurrent import futures
 from pathlib import Path
@@ -9,13 +8,11 @@ from typing import Dict, List, Optional
 
 from tqdm import tqdm
 
-from mastko.config.configs import Configs
 from mastko.data.host import Host
 from mastko.data.target import Target
 from mastko.lib.aws_cidr import AwsCidr
 from mastko.lib.exceptions import (
     FileImportException,
-    NoTargetsFound,
     TargetGeneratorException,
 )
 from mastko.lib.logger import get_logger
