@@ -1,4 +1,3 @@
-
 import re
 import socket
 import sys
@@ -11,10 +10,7 @@ from tqdm import tqdm
 from mastko.data.host import Host
 from mastko.data.target import Target
 from mastko.lib.aws_cidr import AwsCidr
-from mastko.lib.exceptions import (
-    FileImportException,
-    TargetGeneratorException,
-)
+from mastko.lib.exceptions import FileImportException, TargetGeneratorException
 from mastko.lib.logger import get_logger
 
 log = get_logger("mastko.lib.target_generator")
