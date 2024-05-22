@@ -1,9 +1,9 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: Deploy's EC2 instance and Elastic IP to use with masTKO
 Parameters:
-  InstanceName:
+  InstanceNamePrefix:
     Type: String
-    Description: A unique name given to the instance
+    Description: A unique prefix given to the instance name
   InstanceType:
     Type: String
     Description: EC2 Instance type to use. The default EC2 AMI requires a ARM64 based processor, please choose a compatible EC2 Instance Type. Refer https://aws.amazon.com/ec2/instance-types/ for details.
@@ -13,7 +13,11 @@ Parameters:
   SubnetId:
     Type: AWS::EC2::Subnet::Id
     Description: AWS VPC Public Subnet ID to place the instance.
-  Ec2ImageId:
+  ControllerImageId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Description: defaults to latest Amazon Linux 2, change only if necessary
+    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-arm64-gp2
+  BruteForceImageId:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Description: defaults to latest Amazon Linux 2, change only if necessary
     Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-arm64-gp2
@@ -24,6 +28,8 @@ Parameters:
   SshPublicKey:
     Type: String
     Description: public key to setup SSH access to Ec2 Instance. The access will be through AWS Systems Manager (Session Manger) plugin. Refer https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/session-manager.html
+Conditions:
+  AllowSSHFromCondition: !Not [!Equals [!Ref AllowSSHFrom, ""]]
 Resources:
   Ec2InstanceRole:
     Type: AWS::IAM::Role
@@ -38,7 +44,7 @@ Resources:
               - 'sts:AssumeRole'
       Path: /
       Policies:
-        - PolicyName: !Sub 'mastko-ssm-login-permissions-for-${InstanceName}'
+        - PolicyName: !Sub 'mastko-ssm-login-permissions-for-${InstanceNamePrefix}'
           PolicyDocument:
             Statement:
               - Action:
@@ -57,7 +63,7 @@ Resources:
                   - "kms:Decrypt"
                 Effect: "Allow"
                 Resource: "*"
-        - PolicyName: !Sub 'mastko-bruteforce-permissions-for-${InstanceName}'
+        - PolicyName: !Sub 'mastko-bruteforce-permissions-for-${InstanceNamePrefix}'
           PolicyDocument:
             Statement:
               - Action:
@@ -78,28 +84,32 @@ Resources:
   Ec2InstanceSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: !Sub "In/out traffic for mastko ${InstanceName}"
-      GroupName: !Sub "mastko-${InstanceName}-sg"
+      GroupDescription: !Sub "In/out traffic for mastko ${InstanceNamePrefix}"
+      GroupName: !Sub "mastko-${InstanceNamePrefix}-sg"
       VpcId: !Ref VpcId
-
-      # if AllowSSHFrom is not empty, allow SSH access from the CIDR block
-
-
+      SecurityGroupIngress:
+        !If
+          - AllowSSHFromCondition
+          - - IpProtocol: tcp
+              FromPort: 22
+              ToPort: 22
+              CidrIp: !Ref AllowSSHFrom
+          - !Ref "AWS::NoValue"
       SecurityGroupEgress:
         - IpProtocol: tcp
           FromPort: 0
           ToPort: 65535
           CidrIp: 0.0.0.0/0
   
-  Ec2Instance:
+  ControllerInstance:
     Type: AWS::EC2::Instance
     Properties:
-      ImageId: !Ref Ec2ImageId
+      ImageId: !Ref ControllerImageId
       InstanceType: !Ref InstanceType
       IamInstanceProfile: !Ref Ec2InstanceProfile
       Tags:
         - Key: Name
-          Value: !Ref InstanceName
+          Value: !Sub "${InstanceNamePrefix}-Controller"
       NetworkInterfaces:
         - DeviceIndex: "0"
           AssociatePublicIpAddress: "true"
@@ -133,14 +143,29 @@ Resources:
           cd mastko
           git checkout ged
           python3.9 -m pip install .
+  BruteForceInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref BruteForceImageId
+      InstanceType: t4g.nano
+      IamInstanceProfile: !Ref Ec2InstanceProfile
+      Tags:
+        - Key: Name
+          Value: !Sub "${InstanceNamePrefix}-BruteForce"
+      NetworkInterfaces:
+        - DeviceIndex: "0"
+          AssociatePublicIpAddress: "true"
+          SubnetId: !Ref SubnetId
+          GroupSet:
+            - !GetAtt Ec2InstanceSecurityGroup.GroupId
   EIP:
     Type: AWS::EC2::EIP
     Properties:
       Domain: vpc
-  
-
 Outputs:
-  InstanceId:
-    Value: !Ref Ec2Instance
+  ControllerInstance:
+    Value: !Ref ControllerInstance
+  BruteForceInstance:
+    Value: !Ref BruteForceInstance
   EIP:
     Value: !Ref EIP
