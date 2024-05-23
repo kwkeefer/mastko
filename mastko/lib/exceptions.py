@@ -6,6 +6,10 @@ class Ec2ClientException(Exception):
     pass
 
 
+class AutoScalingException(Exception):
+    pass
+
+
 class BruteforcerException(Exception):
     pass
 

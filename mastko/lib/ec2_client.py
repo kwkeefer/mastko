@@ -79,46 +79,44 @@ class Ec2Client:
             log.exception(ex)
             raise Ec2ClientException(msg)
 
-    def associate_eip(self, ec2_instance_id: str, eip_id: str) -> str:
+    def cycle_eip_through_instances(self, instance_ids: str, eip_id: str) -> None:
         try:
-            association = self.ec2_client.associate_address(AllocationId=eip_id, InstanceId=ec2_instance_id)
-            return association["AssociationId"]
+            for instance_id in instance_ids:
+                self.ec2_client.associate_address(AllocationId=eip_id, InstanceId=instance_id)
         except Exception as err:
             message = (
-                f"Failed to associate eip for ec2_instance_id: {ec2_instance_id}, "
+                f"Failed to cycle eip through instances: {instance_ids}, "
                 f"eip_id: {eip_id}. ERROR: {err}"
             )
             log.error(message)
             raise Ec2ClientException(message)
 
-    def disassociate_eip(self, eip_association_id: str) -> None:
-        try:
-            self.ec2_client.disassociate_address(AssociationId=eip_association_id)
-        except Exception as err:
-            message = f"Failed to disassociate eip_association_id: {eip_association_id}. ERROR: {err}"
-            log.error(message)
-            raise Ec2ClientException(message)
-
-    def get_ec2_public_ip(self, instance_id: str) -> str:
+    def get_ip_to_instance_id_dict(self, instance_ids: list) -> dict[str, str]:
+        """
+        Gets public ip addresses of instances
+        Returns a dictionary of {public_ip: instance_id, ...}
+        """
         try:
             response = self.ec2_client.describe_instances(
                 Filters=[
                     {
                         "Name": "instance-id",
-                        "Values": [instance_id],
+                        "Values": instance_ids,
                     },
                 ],
             )
 
-            if len(response["Reservations"]) != 1 or len(response["Reservations"][0]["Instances"]) != 1:
-                raise Ec2ClientException(
-                    f"Describe instance with filter for instance_id: {instance_id} "
-                    f"resulted in ambiguous response: {response}"
-                )
+            if not response["Reservations"]:
+                raise Ec2ClientException(f"No instances found for instance_ids: {instance_ids}")
 
-            return response["Reservations"][0]["Instances"][0]["PublicIpAddress"]
+            return {
+                instance["PublicIpAddress"]: instance["InstanceId"]
+                for reservation in response["Reservations"]
+                for instance in reservation["Instances"]
+            }
+
         except Exception as err:
-            message = f"Failed to get public ip_address of intance: {instance_id}. ERROR: {err}"
+            message = f"Failed to get public ip addresses of intances: {instance_ids}. ERROR: {err}"
             log.error(message)
             log.exception(err)
             raise Ec2ClientException(message)

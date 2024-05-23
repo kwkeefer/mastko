@@ -168,7 +168,11 @@ Resources:
             cat << EOF > /etc/profile.d/mastko.sh
             #!/bin/bash
             export AWS_REGION_NAME="${AWS::Region}"
-            export AUTOSCALING_GROUP_NAME="${NamePrefix}-bruteforce-asg"
+            export MASTKO_ASG_NAME="${NamePrefix}-bruteforce-asg"
+            export MASTKO_EIP_ALLOCATION_ID="${EIP.AllocationId}"
+            export MASTKO_EIP="${EIP}"
+            export MASTKO_VPC_ID="${VpcId}"
+            export MASTKO_SUBNET_ID="${SubnetId}"
             EOF
             chmod 755 /etc/profile.d/mastko.sh
 
@@ -243,5 +247,7 @@ Outputs:
     Value: !Ref ControllerInstance
   AutoScalingGroup:
     Value: !Ref BruteForceAsg
-  EIP:
+  EipAddress:
     Value: !Ref EIP
+  EipAllocationId:
+    Value: !GetAtt EIP.AllocationId

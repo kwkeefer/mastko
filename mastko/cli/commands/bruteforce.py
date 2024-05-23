@@ -13,38 +13,13 @@ def bruteforce_parser(subparser: _SubParsersAction) -> None:
         name="bruteforce", help="runs subdomain takeover bruteforce service"
     )
     bruteforce_parser.add_argument(
-        "--iterations",
+        "-i", "--iterations",
         help="Specify the number of bruteforce iterations",
         metavar="iterations",
         dest="iterations",
         type=int,
         required=True,
     )
-    bruteforce_parser.add_argument(
-        "--elastic-ip",
-        help="Specify the Elastic IP to use for bruteforcing",
-        metavar="eip_ip",
-        dest="eip_ip",
-        type=str,
-        required=True,
-    )
-    bruteforce_parser.add_argument(
-        "--ec2-instance-id",
-        help="Specify the EC2 instance-id to use for bruteforcing",
-        metavar="instance_id",
-        dest="instance_id",
-        type=str,
-        required=True,
-    )
-    bruteforce_parser.add_argument(
-        "--region",
-        help="Specify the AWS region to use for bruteforcing",
-        metavar="region",
-        dest="region",
-        type=str,
-        required=True,
-    )
-
 
 def bruteforce_executer(args: Namespace) -> None:
     log.info(f"Initiating bruteforce for {args.iterations} iterations")
@@ -56,9 +31,6 @@ def bruteforce_executer(args: Namespace) -> None:
         )
 
     bruteforcer = Bruteforcer(
-        targets=Target.get_all_targets_from_db(),
-        region=args.region,
-        instance_id=args.instance_id,
-        eip_ip=args.eip_ip,
+        targets=Target.get_all_targets_from_db()
     )
     bruteforcer.run(iterations=args.iterations)
