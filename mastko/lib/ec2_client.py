@@ -85,8 +85,7 @@ class Ec2Client:
                 self.ec2_client.associate_address(AllocationId=eip_id, InstanceId=instance_id)
         except Exception as err:
             message = (
-                f"Failed to cycle eip through instances: {instance_ids}, "
-                f"eip_id: {eip_id}. ERROR: {err}"
+                f"Failed to cycle eip through instances: {instance_ids}, " f"eip_id: {eip_id}. ERROR: {err}"
             )
             log.error(message)
             raise Ec2ClientException(message)
