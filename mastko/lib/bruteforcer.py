@@ -52,9 +52,11 @@ class Bruteforcer:
         for ip, instance_id in ip_to_ec2_dict.items():
             if ip in self.target_hash:
                 log.info(
-                    f"SUCESSFULL ATTEMPT, takeover match found. ec2_used: {instance_id}, public_ip: {ip}"
+                    f"TKO - SUCCESSFUL TAKEOVER - ec2_used: {instance_id}, public_ip: {ip}"
                 )
                 self._process_successful_takeover(instance_id, ip)
+            else:
+                log.info(f"UNSUCCESSFUL TAKEOVER, ec2_used: {instance_id}, public_ip: {ip}")
 
     def _process_successful_takeover(self, instance_id: str, takeover_ip: str) -> None:
         self.ec2_client.rename_ec2_instance(instance_id, Configs.successful_takeover_ec2_name)
