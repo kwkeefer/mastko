@@ -86,7 +86,7 @@ Resources:
                   - "autoscaling:DescribeAutoScalingGroups"
                   - "autoscaling:DetachInstances"
                 Effect: "Allow"
-                Resource: !Sub "arn:${AWS::Partition}:autoscaling:${AWS::Region}:${AWS::AccountId}:autoScalingGroup:*:autoScalingGroupName/${NamePrefix}-bruteforce-asg"
+                Resource: "*"
   Ec2InstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
