@@ -79,7 +79,7 @@ class Ec2Client:
             log.exception(ex)
             raise Ec2ClientException(msg)
 
-    def cycle_eip_through_instances(self, instance_ids: str, eip_id: str) -> None:
+    def cycle_eip_through_instances(self, instance_ids: list[str], eip_id: str) -> None:
         try:
             for instance_id in instance_ids:
                 self.ec2_client.associate_address(AllocationId=eip_id, InstanceId=instance_id)

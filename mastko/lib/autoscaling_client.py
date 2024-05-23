@@ -1,17 +1,17 @@
 import os
 
-import boto3
+import boto3  # type: ignore
 
-from mastko.lib.exceptions import AutoscalingException
+from mastko.lib.exceptions import AutoScalingException
 from mastko.lib.logger import get_logger
 
 log = get_logger("mastko.lib.autoscaling_client")
 
 
 class AutoscalingClient:
-    def __init__(self, region: str) -> None:
-        self.client = boto3.client("autoscaling", region_name=region)
+    def __init__(self) -> None:
         self.autoscaling_group = os.environ["MASTKO_ASG_NAME"]
+        self.client = boto3.client("autoscaling", region_name=os.environ["AWS_REGION_NAME"])
 
     def get_instances_in_autoscaling_group(self) -> list[str]:
         """
@@ -27,7 +27,7 @@ class AutoscalingClient:
             return instance_ids
         except Exception as ex:
             log.error(ex)
-            raise AutoscalingException(f"Failed to get autoscaling groups: {ex}")
+            raise AutoScalingException(f"Failed to get autoscaling groups: {ex}")
 
     def detatch_instance_from_autoscaling_group(self, instance_id: str) -> None:
         """
@@ -41,4 +41,4 @@ class AutoscalingClient:
             )
         except Exception as ex:
             log.error(ex)
-            raise AutoscalingException(f"Failed to detatch instance from autoscaling group: {ex}")
+            raise AutoScalingException(f"Failed to detatch instance from autoscaling group: {ex}")

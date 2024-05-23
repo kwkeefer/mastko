@@ -24,7 +24,7 @@ class Bruteforcer:
         self.target_hash = self._get_targets_grouped_by_ip(self.targets)
         self.region = os.environ["AWS_REGION_NAME"]
         self.ec2_client = Ec2Client(aws_region=self.region)
-        self.asg_client = AutoscalingClient(aws_region=self.region)
+        self.asg_client = AutoscalingClient()
         self.eip = EIP(
             allocation_id=os.environ["MASTKO_EIP_ALLOCATION_ID"], ip_address=os.environ["MASTKO_EIP"]
         )
@@ -39,16 +39,16 @@ class Bruteforcer:
 
         return target_hash
 
-    def _cycle_eip_through_autoscaling_group(self, autoscaling_group_name: str) -> None:
+    def _cycle_eip_through_autoscaling_group(self) -> None:
         try:
-            instance_ids = self.asg_client.get_instances_in_autoscaling_group(autoscaling_group_name)
-            self.asg_client.cycle_eip_through_ec2_instance(instance_ids, self.eip.allocation_id)
+            instance_ids = self.asg_client.get_instances_in_autoscaling_group()
+            self.ec2_client.cycle_eip_through_instances(instance_ids, self.eip.allocation_id)
         except Exception as err:
-            message = f"Failed to cycle eip through autoscaling group: {autoscaling_group_name}. ERROR: {err}"
+            message = f"Failed to cycle eip through autoscaling group. ERROR: {err}"
             log.error(message)
             raise BruteforcerException(message)
 
-    def _check_if_takeover(self, ip_to_ec2_dict: list) -> list:
+    def _check_if_takeover(self, ip_to_ec2_dict: dict[str, str]) -> None:
         for ip, instance_id in ip_to_ec2_dict.items():
             if ip in self.target_hash:
                 log.info(
@@ -84,7 +84,8 @@ class Bruteforcer:
 
             end_time: datetime = datetime.now().replace(microsecond=0)
             log.info(
-                f"MasTKO finished executing {iterations} iterations in {end_time - start_time} (HH:MM:SS) time."
+                f"MasTKO finished executing {iterations} iterations in {end_time - start_time} "
+                "(HH:MM:SS) time."
             )
         except Exception as ex:
             message = f"Exception caught in bruteforce handler, error: {ex}"
